@@ -11,7 +11,7 @@
 <meta property="og:url" content="https://arnefranz-del.github.io/vantara-2050/">
 <meta property="og:image" content="https://arnefranz-del.github.io/vantara-2050/preview.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<title>VANTARA 2050</title>
+<title>VANTARA 2050 · City Life 2.0</title>
 <style>
 :root{color-scheme:dark;--ink:#eef7f5;--dim:#a9bbbb;--mint:#9fffe2;--amber:#ffb276;--line:#b7e8e337;--mono:ui-monospace,SFMono-Regular,Consolas,monospace;--edge:clamp(22px,5.5vw,104px)}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080f17;color:var(--ink);font:15px/1.5 system-ui,sans-serif}button{font:inherit;color:inherit;cursor:pointer}button:focus-visible{outline:2px solid var(--mint);outline-offset:5px}[hidden]{display:none!important}
@@ -36,10 +36,10 @@ footer{position:absolute;bottom:28px;left:var(--edge);right:var(--edge);border-t
 </head>
 <body>
 <canvas id="world" aria-label="Interaktive 3D-Stadt Vantara"></canvas><div id="shade"></div>
-<header><div class="brand"><span class="brand-icon" aria-hidden="true"></span><div><strong>VANTARA</strong><small>DELTA CITY · 2050</small></div></div><div class="header-actions"><button class="small-button" type="button" id="soundBtn" aria-pressed="false">Ton aus</button><button class="small-button" type="button" id="helpBtn">Steuerung</button><button class="small-button" type="button" id="menuBtn" hidden>Menü</button></div></header>
+<header><div class="brand"><span class="brand-icon" aria-hidden="true"></span><div><strong>VANTARA</strong><small>DELTA CITY · V2.0</small></div></div><div class="header-actions"><button class="small-button" type="button" id="soundBtn" aria-pressed="false">Ton aus</button><button class="small-button" type="button" id="helpBtn">Steuerung</button><button class="small-button" type="button" id="menuBtn" hidden>Menü</button></div></header>
 <section id="intro" aria-labelledby="title">
   <div class="hero">
-    <div class="eyebrow">Ankunft am Delta</div>
+    <div class="eyebrow">City Life · Version 2.0</div>
     <h1 id="title">VANTARA</h1><div class="year">2050</div>
     <p class="pitch">Die Gezeiten haben die Straßen verschluckt. Vantara hat sich darüber neu erfunden. Heute Nacht sendet die alte Stadt wieder.</p>
     <div class="actions"><button type="button" class="primary" id="startBtn">Stadt betreten <span aria-hidden="true">↗</span></button><button type="button" class="small-button" id="trailerBtn">▶ Intro</button></div>
@@ -62,9 +62,9 @@ footer{position:absolute;bottom:28px;left:var(--edge);right:var(--edge);border-t
     <dt><kbd>W A S D</kbd></dt><dd>Gehen oder gleiten</dd><dt><kbd>Maus</kbd> <kbd>← →</kbd></dt><dd>Umsehen, alternativ ziehen</dd>
     <dt><kbd>Shift</kbd> <kbd>Leertaste</kbd></dt><dd>Sprinten und springen</dd><dt><kbd>F</kbd></dt><dd>Gleitmodus umschalten</dd>
     <dt><kbd>Leertaste</kbd> <kbd>C</kbd></dt><dd>Im Gleitmodus steigen oder sinken</dd><dt><kbd>E</kbd></dt><dd>Funkstation abhören</dd>
-    <dt><kbd>M</kbd> <kbd>T</kbd></dt><dd>Stadtkarte öffnen, Tageszeit wechseln</dd><dt><kbd>Esc</kbd></dt><dd>Maus freigeben oder Menü schließen</dd>
+    <dt><kbd>M</kbd> <kbd>T</kbd></dt><dd>Stadtkarte öffnen, Tageszeit wechseln</dd><dt><kbd>P</kbd></dt><dd>Drohnenshow am Lotus Exchange starten</dd><dt><kbd>Esc</kbd></dt><dd>Maus freigeben oder Menü schließen</dd>
   </dl>
-  <div class="panel-actions"><button class="small-button" type="button" id="timeBtn">Tageszeit wechseln</button><button class="small-button" type="button" id="qualityBtn">Grafik · Hoch</button><button class="small-button" type="button" id="resetBtn" hidden>Zurück zum Pier</button><button class="small-button" type="button" id="introBack" hidden>Titelseite</button></div>
+  <div class="panel-actions"><button class="small-button" type="button" id="timeBtn">Tageszeit wechseln</button><button class="small-button" type="button" id="qualityBtn">Grafik · Hoch</button><button class="small-button" type="button" id="festivalBtn">Zur Drohnenshow</button><button class="small-button" type="button" id="resetBtn" hidden>Zurück zum Pier</button><button class="small-button" type="button" id="introBack" hidden>Titelseite</button></div>
 </div></section>
 <section class="modal" id="map" role="dialog" aria-modal="true" aria-labelledby="mapTitle" hidden><div class="panel panel-wide">
   <div class="panel-top"><h2 id="mapTitle">Stadtkarte</h2><button class="small-button" type="button" data-close aria-label="Schließen">×</button></div>
@@ -194,6 +194,9 @@ void main(){
     float glass=step(.075,f.x)*step(f.x,.91)*step(.17,f.y)*step(f.y,.82);
     c=mix(c*.70,c*1.12+horizon(-view)*.14,glass);
     c+=frame*vC;
+    float joint=1.-smoothstep(.014,.045,min(f.x,1.-f.x));
+    c*=1.-.18*joint;
+    c+=glass*.023*vec3(.51,.84,.91)*sin(vP.y*.33+vData.y);
     vec3 lamp=mix(vec3(1.,.61,.30),vec3(.26,.86,.93),step(.69,hash(cell+vData.y+131.)));
     c+=led*lamp*(.10+.54*uDusk+.21*uNight)*(.55+hsh*.43);
     c*=.82+.18*smoothstep(0.,30.,vP.y);
@@ -241,11 +244,13 @@ vec3 bright(vec2 p){vec3 c=texture(uScene,p).rgb;return max(c-.48,0.);}
 void main(){
   vec3 c=texture(uScene,vUv).rgb;
   if(uBloom){
-    vec2 s=uPixel*3.8;vec3 b=vec3(0.);
+    vec3 neighbours=texture(uScene,vUv+vec2(uPixel.x,0.)).rgb+texture(uScene,vUv-vec2(uPixel.x,0.)).rgb+texture(uScene,vUv+vec2(0.,uPixel.y)).rgb+texture(uScene,vUv-vec2(0.,uPixel.y)).rgb;
+    c+=clamp(c-neighbours*.25,-.09,.09)*.43;
+    vec2 s=uPixel*3.1;vec3 b=vec3(0.);
     b+=bright(vUv+vec2(s.x,0.))+bright(vUv-vec2(s.x,0.));
     b+=bright(vUv+vec2(0.,s.y))+bright(vUv-vec2(0.,s.y));
     b+=(bright(vUv+s)+bright(vUv-s)+bright(vUv+vec2(s.x,-s.y))+bright(vUv+vec2(-s.x,s.y)))*.61;
-    c+=b*.115;
+    c+=b*.089;
   }
   c=pow(max(c,0.),vec3(.88));
   float vignette=1.-dot(vUv-.5,vUv-.5)*.44;
@@ -315,9 +320,45 @@ function softHorizon(){
   const base=[.51,.65,.69],sunset=[.64,.33,.24],after=[.077,.108,.18];
   return base.map((c,i)=>mix(mix(c,sunset[i],dusk*.84),after[i],night));
 }
+const staticTiles=new Map();
+function indexScenery(){
+  for(const face of softCity){
+    const [x,,z]=face.mid,key=Math.floor(x/86)+','+Math.floor(z/86);
+    if(!staticTiles.has(key))staticTiles.set(key,{x:(Math.floor(x/86)+.5)*86,z:(Math.floor(z/86)+.5)*86,r:62,faces:[]});
+    const tile=staticTiles.get(key);tile.faces.push(face);
+    tile.r=Math.max(tile.r,Math.hypot(x-tile.x,z-tile.z)+Math.min(600,face.radius));
+  }
+}
+const facadeSheets=new Map();
+function drawWindows(ctx,pts,face,dist){
+  const [a,b,c,d]=pts,w=Math.hypot(b[0]-a[0],b[1]-a[1]),h=Math.hypot(d[0]-a[0],d[1]-a[1]);
+  if(w<6||h<9)return;
+  const cols=clamp(Math.round(face.dims[0]/3),1,24),rows=clamp(Math.round(face.dims[1]/3.5),1,62);
+  const variant=Math.floor(face.tag*27)%7,key=cols+','+rows+','+variant;
+  let sheet=facadeSheets.get(key);
+  if(!sheet){
+    sheet=document.createElement('canvas');sheet.width=cols*4;sheet.height=rows*5;
+    const g=sheet.getContext('2d');
+    for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){
+      const hash=softwareHash(i+variant*11,j+variant*7);
+      if(hash>.64){g.fillStyle=hash>.88?'#86e6fa':'#ffc18a';g.fillRect(i*4,j*5+1,3,2);}
+    }
+    facadeSheets.set(key,sheet);
+  }
+  const strips=w>130?6:w>55?3:1;
+  ctx.save();ctx.globalAlpha=(.54+.22*dusk+.12*night)*Math.exp(-Math.max(dist,0)*.0009);
+  for(let i=0;i<strips;i++){
+    const u=i/strips,v=(i+1)/strips;
+    const top=[mix(d[0],c[0],u),mix(d[1],c[1],u)],end=[mix(d[0],c[0],v),mix(d[1],c[1],v)],base=[mix(a[0],b[0],u),mix(a[1],b[1],u)];
+    ctx.save();ctx.transform(end[0]-top[0],end[1]-top[1],base[0]-top[0],base[1]-top[1],top[0],top[1]);
+    ctx.drawImage(sheet,u*sheet.width,0,sheet.width/strips,sheet.height,0,0,1,1);ctx.restore();
+  }
+  ctx.restore();
+}
+
 function drawSoftware(){
   const w=canvas.clientWidth,h=canvas.clientHeight;
-  const scale=Math.min(1,(quality?1440:810)/Math.max(w,h));
+  const scale=Math.min(devicePixelRatio||1,(quality?1920:960)/Math.max(w,h));
   const sw=Math.max(1,Math.round(w*scale)),sh=Math.max(1,Math.round(h*scale));
   if(canvas.width!==sw||canvas.height!==sh){canvas.width=sw;canvas.height=sh;}
   camera();
@@ -430,7 +471,10 @@ function drawSoftware(){
       queue.push([depth,face]);
     }
   }
-  queueFaces(softCity);queueFaces(softMoving);
+  for(const tile of staticTiles.values()){
+    if(couldSee(tile.x,40,tile.z,tile.r+130,1800+tile.r))queueFaces(tile.faces);
+  }
+  queueFaces(softMoving);
   queue.sort((a,b)=>b[0]-a[0]);
   reflections.length=0;
   let reflectedCount=0;
@@ -440,7 +484,7 @@ function drawSoftware(){
     if(!st)continue;
     const pts=st.map(project);
     if(pts.every(p=>p[0]<0)||pts.every(p=>p[0]>W)||pts.every(p=>p[1]<0)||pts.every(p=>p[1]>H))continue;
-    const fog=clamp(1-Math.exp(-Math.max(depth,0)*.00128),0,.85);
+    const fog=clamp(1-Math.exp(-Math.max(depth,0)*.00112),0,.85);
     const lamp=mat===2||mat===6;
     const sunlight=Math.max(0,dot(n,sun));
     const light=lamp?1.12:(.57+.18*n[1]+sunlight*.53*(1-night))*(1-night*.46);
@@ -452,29 +496,8 @@ function drawSoftware(){
       reflections.push({points:face.points,tint:'rgba('+tint.map(v=>Math.round(clamp(v,0,1)*255)).join(',')+','+(lamp?.56:.42)+')'});
       reflectedCount++;
     }
-    if((mat===1||mat===7)&&st===cameraPoints&&quality&&depth<1050){
-      const span=Math.hypot(pts[1][0]-pts[0][0],pts[1][1]-pts[0][1]);
-      const height=Math.hypot(pts[3][0]-pts[0][0],pts[3][1]-pts[0][1]);
-      const cols=Math.max(1,Math.floor(dims[0]/(mat===7?3.7:2.75)));
-      const rows=Math.max(1,Math.floor(dims[1]/(mat===7?4.5:3.47)));
-      if(span<9||height<13)continue;
-      const incX=Math.max(1,Math.ceil(cols*1.9/span)),incY=Math.max(1,Math.ceil(rows*2.2/height));
-      const at=(u,v)=>project(cameraPoints[0].map((p,i)=>mix(mix(p,cameraPoints[1][i],u),mix(cameraPoints[3][i],cameraPoints[2][i],u),v)));
-      const windowColors=[softwareTone([1,.67,.39].map((v,i)=>mix(v,horizon[i],fog*.9))),softwareTone([.41,.86,.88].map((v,i)=>mix(v,horizon[i],fog*.8)))];
-      ctx.globalAlpha=.48+.28*dusk+.10*night;
-      for(let j=0;j<rows;j+=incY){
-        for(let i=0;i<cols;i+=incX){
-          const h=softwareHash(i+tag*23,j+tag*47);
-          if(h<.66)continue;
-          const u=(i+.15)/cols,v=(j+.26)/rows,a=at(u,v),b=at((i+.88)/cols,v),d=at(u,(j+.70)/rows);
-          const x=Math.min(a[0],b[0],d[0]),y=Math.min(a[1],b[1],d[1]);
-          const width=Math.max(a[0],b[0],d[0])-x,rise=Math.max(a[1],b[1],d[1])-y;
-          if(x>W||y>H||x+width<0||y+rise<0||width<1||rise<.8)continue;
-          ctx.fillStyle=windowColors[h>.887?1:0];
-          ctx.fillRect(x,y,Math.min(width,45),Math.min(rise,27));
-        }
-      }
-      ctx.globalAlpha=1;
+    if((mat===1||mat===7)&&st===cameraPoints&&depth<(quality?1100:520)){
+      drawWindows(ctx,pts,face,depth);
     }else if(mat===5&&st===cameraPoints){
       const signIndex=clamp(Math.round(tag),0,signs.length-1);
       const [a,b,,d]=pts;
@@ -590,10 +613,11 @@ function antenna(x,y,z,h,c){
 const signs=[
   ['VANTARA','DELTA TRANSIT',neon],['THE HALO','TIDAL POWER',warm],['LOTUS','NIGHT EXCHANGE',violet],
   ['SKY GARDENS','SEED BANK',neon],['SIGNAL','92.5 FM',aqua],['UNDERTOW','PUMP DISTRICT',ruby],
-  ['NOCTURNE','NIGHT FERRY',warm],['SYN/AIR','FREIGHT ABOVE',aqua]
+  ['NOCTURNE','NIGHT FERRY',warm],['SYN/AIR','FREIGHT ABOVE',aqua],
+  ['UMAMI','NOODLE BAR',warm],['NIGHT TEA','FRESH BREW',neon],['ORBIT','STREET FOOD',ruby],['DELTA FM','LIVE AT LOTUS',violet]
 ];
 const atlasCanvas=document.createElement('canvas');
-atlasCanvas.width=512;atlasCanvas.height=1024;
+atlasCanvas.width=512;atlasCanvas.height=128*signs.length;
 const ac=atlasCanvas.getContext('2d');
 for(let i=0;i<signs.length;i++){
   const [title,subtext,c]=signs[i],y=i*128;
@@ -605,7 +629,7 @@ for(let i=0;i<signs.length;i++){
   ac.font='17px monospace';ac.fillText(subtext.split('').join(' '),256,y+97,435);
 }
 function sign(x,y,z,w,h,i,facing=1){
-  const bottom=1-(i+1)/8,top=1-i/8;
+  const bottom=1-(i+1)/signs.length,top=1-i/signs.length;
   const s=w*.5*facing;
   quad(city,[x-s,y,z],[x+s,y,z],[x+s,y+h,z],[x-s,y+h,z],pale,5,i,[[0,bottom],[1,bottom],[1,top],[0,top]]);
 }
@@ -889,17 +913,358 @@ function makeVAO(mesh,dynamic=false){
     gl.enableVertexAttribArray(i);
     gl.vertexAttribPointer(i,i===4?2:3,gl.FLOAT,false,56,i*12);
   }
-  return {vao,buffer,count:initial.length/14};
+  return {vao,buffer,count:initial.length/14,capacity:dynamic?4*14*42000:initial.byteLength};
 }
-const traffic=[];
-for(let i=0;i<22;i++) traffic.push({x:randIn(-220,280),z:randIn(-650,680),h:randIn(21,109),speed:randIn(9,24)*(i%2?-1:1),size:randIn(.63,1.65),side:i%4===0});
+const coats=['e9a574','56aaa1','834e95','455a88','cb626d','c2ccd0','526063','d2c386','427f9e'].map(rgb);
+const skinTones=['8b563b','b27f5f','d7a887','7b5145','e1bc9e'].map(rgb);
+const streetColors=['58737e','8b5b64','a4a69b','426d75','89827b','617361'].map(rgb);
+const boot=rgb('202730'),visor=rgb('72969e');
+const eventColors=[neon,aqua,violet,warm];
+const people=[], routes=[], roadTraffic=[], airLanes=[];
+const festival={period:93,length:17,initial:25,requested:-Infinity,announced:false};
+const wrap=(v,n)=>((v%n)+n)%n;
+const moduloHour=t=>wrap(t,festival.period);
+
+function addWalkway(y,points,count,lateral=.3){
+  const segments=[];
+  let total=0;
+  for(let i=0;i<points.length;i++){
+    const [x,z]=points[i],[nx,nz]=points[(i+1)%points.length];
+    const length=Math.hypot(nx-x,nz-z);
+    segments.push({x,z,nx,nz,length,start:total,yaw:Math.atan2(nx-x,nz-z)});
+    total+=length;
+  }
+  const route={y,segments,total};
+  routes.push(route);
+  for(let i=0;i<count;i++){
+    people.push(makePerson({
+      route,offset:(i+randIn(.06,.76))/count*total,
+      speed:randIn(.73,1.52),side:randIn(-lateral,lateral)
+    }));
+  }
+}
+function makePerson(params){
+  return {...params,coat:pick(coats),skin:pick(skinTones),height:randIn(1.53,1.95),
+    phase:randIn(0,TAU),bag:rand()<.34,hat:rand()<.26};
+}
+function addGathering(x,y,z,count,radius){
+  for(let i=0;i<count;i++){
+    const a=i*TAU/count+randIn(-.24,.24),r=radius*randIn(.76,1.13);
+    people.push(makePerson({x:x+Math.sin(a)*r,y,z:z+Math.cos(a)*r,yaw:a+Math.PI}));
+  }
+}
+function samplePedestrian(person,t){
+  const {route,phase}=person;
+  if(!route)return {x:person.x,y:person.y,z:person.z,yaw:person.yaw+Math.sin(t*.72+phase)*.23,stride:0};
+  const dist=wrap(t*person.speed+person.offset,route.total);
+  const segment=route.segments.find(s=>dist<s.start+s.length)||route.segments.at(-1);
+  const f=(dist-segment.start)/segment.length, {yaw}=segment;
+  return {x:mix(segment.x,segment.nx,f)+Math.cos(yaw)*person.side,y:route.y,
+    z:mix(segment.z,segment.nz,f)-Math.sin(yaw)*person.side,yaw,stride:t*person.speed*5.4+phase};
+}
+function couldSee(x,y,z,radius,maxRange){
+  const dx=x-view.pos[0],dy=y-view.pos[1],dz=z-view.pos[2];
+  const length2=dx*dx+dy*dy+dz*dz;
+  if(length2>maxRange*maxRange)return false;
+  const f=basis.f,r=basis.r;
+  const depth=dx*f[0]+dy*f[1]+dz*f[2];
+  const right=dx*r[0]+dz*r[2];
+  // Keep both above- and below-horizon traffic for the reflected view.
+  return depth+radius>-.5&&Math.abs(right)<depth*viewLens[0]+radius*2+12;
+}
+function personMesh(person,state,t){
+  const {x,y,z,yaw,stride}=state,h=person.height;
+  if(!couldSee(x,y+h*.5,z,1.4,software?175:235))return false;
+  const distance=Math.hypot(x-view.pos[0],y-view.pos[1],z-view.pos[2]);
+  const nearDetail=distance<(software?18:44);
+  if(distance>(software?28:75)){
+    const shift=person.route?Math.sin(stride)*.08:0;
+    box(moving,x,y+.08,z,h*.172,h*.43,h*.116,boot,0,0,yaw);
+    box(moving,x+shift,y+h*.48,z,h*.228,h*.36,h*.146,person.coat,0,0,yaw);
+    box(moving,x+shift,y+h*.84,z,h*.133,h*.15,h*.131,person.skin,0,0,yaw);
+    return true;
+  }
+  const sx=Math.cos(yaw),sz=-Math.sin(yaw),fx=Math.sin(yaw),fz=Math.cos(yaw),walk=!!person.route;
+  const bob=walk?Math.abs(Math.sin(stride))*.043:Math.sin(t*1.6+person.phase)*.014;
+  const p=(side,up,forward)=>[x+side*sx+forward*fx,y+up,z+side*sz+forward*fz];
+  const torso=p(0,h*.49+bob,0),head=p(0,h*.835+bob,.012);
+  box(moving,...torso,h*.234,h*.34,h*.139,person.coat,0,0,yaw);
+  box(moving,...head,h*.126,h*.128,h*.137,person.skin,0,0,yaw);
+  if(nearDetail){
+    box(moving,...p(0,h*.937+bob,-.014),h*.138,h*.046,h*.138,person.hat?person.coat:boot,0,0,yaw);
+    const seam=p(0,h*.67+bob,h*.074);
+    box(moving,...seam,h*.115,.023,.023,neon,2,0,yaw);
+    if(person.bag){
+      box(moving,...p(0,h*.55+bob,-h*.101),h*.155,h*.233,h*.10,boot,0,0,yaw);
+      box(moving,...p(0,h*.705+bob,-h*.157),h*.096,.027,.025,warm,2,0,yaw);
+    }
+  }
+  for(const sign of [-1,1]){
+    const swing=walk?Math.sin(stride)*sign:0,stomp=walk?Math.max(0,Math.cos(stride)*sign)*.13:0;
+    const heel=p(sign*h*.061,.05+stomp,swing*.245);
+    const hip=p(sign*h*.062,h*.49+bob,0);
+    const arm=p(sign*h*.145,h*.748+bob,0);
+    const wrist=p(sign*h*.171,h*.492+bob,-swing*.17+(walk?0:Math.sin(t*2+person.phase)*.06));
+    beam(moving,heel,hip,h*.047,boot,0,4);
+    if(nearDetail){
+      box(moving,...p(sign*h*.061,.025+stomp,swing*.245+.047),h*.104,.091,h*.189,boot,0,0,yaw);
+      beam(moving,wrist,arm,h*.045,person.coat,0,4);
+      box(moving,...wrist,h*.057,.088,h*.06,person.skin,0,0,yaw);
+    }
+  }
+  return true;
+}
+
+function streetVehicle(x,y,z,yaw,length,color,isShuttle){
+  const w=isShuttle?2.6:1.98;
+  box(moving,x,y+.24,z,w,isShuttle?1.63:.81,length,color,0,0,yaw);
+  const glass=isShuttle?1.63:.91;
+  box(moving,x,y+glass,z,w*.86,isShuttle?.73:.58,length*.57,visor,0,0,yaw);
+  const sine=Math.sin(yaw),cosine=Math.cos(yaw);
+  const point=(side,up,front)=>[x+side*cosine+front*sine,y+up,z-side*sine+front*cosine];
+  for(const side of [-1,1]){
+    box(moving,...point(side*w*.33,.43,length*.498),.35,.112,.10,neon,2,0,yaw);
+    box(moving,...point(side*w*.33,.42,-length*.498),.35,.106,.10,ruby,2,0,yaw);
+  }
+  if(isShuttle)box(moving,x,y+2.36,z,.19,.12,length*.55,warm,2,0,yaw);
+}
+function airship(x,y,z,yaw,size,color,type){
+  const f=[Math.sin(yaw),0,Math.cos(yaw)],r=[f[2],0,-f[0]],p=[x,y,z];
+  const at=(s,h,d)=>add(add(add(p,mul(r,s*size)),[0,h*size,0]),mul(f,d*size));
+  if(type==='freight'){
+    box(moving,...at(0,0,0),6.6*size,1.4*size,14.4*size,color,0,0,yaw);
+    box(moving,...at(0,1.4,1.6),3.65*size,1.05*size,8.9*size,visor,0,0,yaw);
+    box(moving,...at(0,-.45,-.7),4.1*size,.48*size,9.5*size,concrete,9,6.7,yaw);
+    for(const side of [-1,1]){
+      box(moving,...at(side*3.7,.12,-.04),1.22*size,1.04*size,8.4*size,dark,0,0,yaw);
+      beam(moving,at(side*3.7,.54,-4.1),at(side*3.7,.54,3.4),.21*size,aqua,2,4);
+    }
+    beam(moving,at(-2.45,.43,7.25),at(2.45,.43,7.25),.17*size,neon,2,4);
+    beam(moving,at(-2.7,.53,-7.23),at(2.7,.53,-7.23),.19*size,ruby,2,4);
+  }else if(type==='courier'){
+    box(moving,...at(0,0,0),1.25*size,.61*size,3.75*size,color,0,0,yaw);
+    beam(moving,at(-1.9,.32,-.4),at(1.9,.32,-.4),.19*size,steel,0,4);
+    box(moving,...at(0,.55,.47),.77*size,.42*size,1.62*size,visor,0,0,yaw);
+    for(const side of [-1,1]){
+      box(moving,...at(side*1.81,.19,-.49),.64*size,.39*size,1.55*size,steel,0,0,yaw);
+      box(moving,...at(side*1.82,.035,-.49),.40*size,.15*size,1.31*size,side<0?neon:warm,2,0,yaw);
+    }
+  }else{
+    vessel(moving,x,y,z,2.65*size,6.2*size,yaw,color,true);
+  }
+}
+function showWake(x,z,yaw,pace,strength){
+  const f=[Math.sin(yaw),0,Math.cos(yaw)],r=[f[2],0,-f[0]],y=WATER+.026;
+  for(let i=0;i<6;i++){
+    const offset=6+i*4.3+pace;
+    for(const side of [-1,1]){
+      const p=[x-f[0]*offset+r[0]*side*i*1.18,y,z-f[2]*offset+r[2]*side*i*1.18];
+      const width=(1.2+i*.58)*strength;
+      const color=mul(aqua,(.55-i*.052)*strength);
+      if(software)quad(moving,add(p,mul(r,-width)),add(p,mul(f,.53)),add(p,mul(r,width)),add(p,mul(f,-.53)),color,2);
+      else beam(moving,add(p,mul(r,-width)),add(p,mul(r,width)),.019,color,2);
+    }
+  }
+}
+function prepareCityLife(){
+  // Routes occupy pedestrian corridors between the market counters and the river.
+  addWalkway(.32,[[116,34],[152,34],[152,55],[116,55]],23,1.1);
+  addWalkway(.32,[[124,32],[129,36],[126,52],[123,55],[119,51],[119,36]],8,.38);
+  addGathering(137,.32,46,8,3.3);
+  addGathering(118,.32,45,3,1.28);
+  addGathering(156,.32,38,4,1.56);
+  addWalkway(31,[[-101,193],[-74,193],[-74,212],[-98,216],[-101,209]],9,.43);
+  addGathering(-83,31,187,4,1.15);
+  addWalkway(20,[[-145,-242],[-109,-242],[-102,-238],[-102,-200],[-91,-198],[-91,-191],[-91,-236],[-99,-247],[-145,-247]],9,.35);
+  addWalkway(14,[[-24,-128],[44,-128],[44,-130],[-24,-130]],8,.34);
+  addWalkway(126,[[129,-331],[153,-331],[153,-326],[129,-326]],5,.30);
+  addWalkway(.26,[[49,364],[54,367],[54,397],[48,395]],5,.41);
+  for(const x of [-45.7,45.7])for(let z=-598;z<643;z+=157){
+    if(x>0&&z<422&&z+80>354)continue;
+    addWalkway(0,[[x,z],[x,z+73],[x+Math.sign(x)*1.4,z+76],[x+Math.sign(x)*1.4,z]],4,.26);
+  }
+  for(const z of [-550,108,350,593])addWalkway(.53,[[-35,z+4],[35,z+4],[35,z+2.7],[-35,z+2.7]],4,.2);
+  for(const x of [-301,-243,-185,-127,-69,69,127,185,243,301,359]){
+    for(let i=0;i<7;i++){
+      const direction=i%2===0?1:-1;
+      roadTraffic.push({x:x+direction*2.0,direction,start:randIn(0,1260),
+        speed:randIn(6.5,13.4),length:i%5===0?7.4:randIn(3.35,4.9),color:pick(streetColors)});
+    }
+  }
+  for(const [x,h] of [[-44,31],[-23,48],[8,65],[31,36],[58,75],[89,87],[-108,97],[162,142]]){
+    const count=x>=89||x<=-108?5:7;
+    for(let i=0;i<count;i++){
+      const type=i%5===0?'freight':i%3===0?'taxi':'courier';
+      const floorY=type==='freight'?7:0;
+      airLanes.push({x,h:h+floorY+randIn(-2.5,2.5),offset:i*1390/count+randIn(-36,36),speed:randIn(12,24)*Math.sign(x),
+        size:randIn(.85,1.34),side:false,type,color:pick(streetColors)});
+    }
+  }
+  for(const [z,h] of [[175,60],[-115,137],[337,71],[-303,157]])for(let i=0;i<6;i++){
+    airLanes.push({z,h:h+i%2*5,offset:i*222+randIn(-24,24),speed:randIn(14,21)*(z>0?1:-1),
+      size:randIn(.86,1.29),side:true,type:i%3===0?'freight':'taxi',color:pick(streetColors)});
+  }
+}
+function festivalProgress(t){
+  if(t-festival.requested<festival.length)return t-festival.requested;
+  if(t<festival.initial)return -1;
+  const phase=moduloHour(t-festival.initial);
+  return phase<festival.length?phase:-1;
+}
+function renderFestival(t){
+  const phase=festivalProgress(t);
+  const active=phase>=0;
+  // The plaza installation always rotates and the sky procession arrives during the event.
+  if(couldSee(136,6,45,10,430)){
+    const rotation=t*.82,spin=active?1.24:1,cy=5.2+Math.sin(t*.84)*.46;
+    const center=[136,cy,45],c=active?eventColors[Math.floor(phase*1.7)%eventColors.length]:violet;
+    const points=[];
+    for(let i=0;i<6;i++){
+      const angle=rotation+i*TAU/6;
+      points.push([center[0]+Math.cos(angle)*2.03*spin,cy+Math.sin(i*TAU/3+t*.9)*.46,
+        center[2]+Math.sin(angle)*2.03*spin]);
+    }
+    for(let i=0;i<points.length;i++){
+      const a=points[i],b=points[(i+1)%points.length];
+      beam(moving,a,b,.064,c,6,4);
+      beam(moving,a,[136,cy+2.35,45],.045,aqua,6,4);
+      beam(moving,a,[136,cy-1.63,45],.045,violet,6,4);
+    }
+  }
+  if(!active)return;
+  for(let i=0;i<19;i++){
+    const u=phase/17,a=i*TAU/19+u*4.87,r=12+Math.sin(u*Math.PI)*24;
+    const x=136+Math.cos(a)*r,z=45+Math.sin(a)*r,y=18+Math.sin(u*Math.PI)*31+Math.sin(i*.93+phase*1.9)*3.1;
+    if(!couldSee(x,y,z,8,630))continue;
+    const c=eventColors[i%eventColors.length];
+    box(moving,x,y,z,1.17,.24,1.36,c,2,0,a);
+    const end=[x+Math.sin(a)*3.3,y-.67,z-Math.cos(a)*3.3];
+    beam(moving,[x,y,z],end,.073,c,2,4);
+  }
+}
+function requestFestival(){
+  if(festivalProgress(clock)<0){festival.requested=clock;lastDynamic=-1;}
+  tracked=2;
+  showToast('Lotus Exchange · Drohnenshow');
+  tone(285);tone(428,.14);tone(570,.28);
+}
+function renderCityLife(t){
+  
+  for(const walker of people){
+    personMesh(walker,samplePedestrian(walker,t),t);
+  }
+  for(const car of roadTraffic){
+    const z=wrap(car.start+t*car.speed,1260)*car.direction-630*car.direction;
+    // Skip markets and elevated foundations that interrupt an axial lane.
+    if((car.x===129&&z>9&&z<85)||(Math.abs(car.x+129)<4&&z<-183&&z>-253))continue;
+    const isShuttle=car.length>7;
+    if(!couldSee(car.x,.78,z,car.length*.72,software?410:660))continue;
+    const x=car.x;
+    const level=floorAt(x,z,.1,.25);
+    if(level>.32||earth(x,z)<0||hits(x,z,.12,0))continue;
+    streetVehicle(x,Math.max(0,level),z,car.direction===1?0:Math.PI,car.length,car.color,isShuttle);
+    
+  }
+  for(const craft of airLanes){
+    const along=wrap(craft.offset+t*craft.speed,1390)-695;
+    const x=craft.side?along:craft.x,z=craft.side?craft.z:along,y=craft.h+Math.sin(t*.78+craft.offset)*.82;
+    const radius=craft.type==='freight'?12:5;
+    if(!couldSee(x,y,z,radius,software?810:1050))continue;
+    if(hits(x,z,y,0))continue;
+    const angle=craft.side?Math.sign(craft.speed)*Math.PI/2:craft.speed>0?0:Math.PI;
+    airship(x,y,z,angle,craft.size,craft.color,craft.type);
+    
+  }
+  // A near-field commuter stream makes the first vista active as soon as it opens.
+  for(let i=0;i<6;i++){
+    const direction=i%2===0?1:-1, z=115-i*39;
+    const x=-84+wrap(t*(16+i*1.5)*direction+71*i+114,260);
+    const y=44+i*5+Math.sin(t*.66+i)*1.23;
+    if(!couldSee(x,y,z,12,530)||hits(x,z,y,0))continue;
+    airship(x,y,z,direction*Math.PI/2,i%3===0?1.26:.96,streetColors[i%streetColors.length],i%3===0?'freight':i%2===0?'courier':'taxi');
+    
+  }
+  for(let i=0;i<4;i++){
+    const direction=i%2===0?1:-1,x=-26+i*16,y=-.94,pace=wrap(t*2.3+i,4.0);
+    const z=-648+wrap((109+i*213)+t*(5.25+i)*direction,1296);
+    if(!couldSee(x,0,z,19,920))continue;
+    const yaw=direction>0?0:Math.PI;
+    showWake(x,z,yaw,pace,i%2===0?.85:.58);
+    vessel(moving,x,y,z,i%2===0?8.4:5.2,i%2===0?25:13,yaw,streetColors[(i+1)%streetColors.length],true);
+    
+  }
+  renderFestival(t);
+  
+}
+function marketFurniture(){
+  const stalls=[[108,25],[135,25],[162,25],[108,45],[162,45],[108,65],[135,65],[162,65]];
+  for(let i=0;i<stalls.length;i++){
+    const [x,z]=stalls[i],c=[warm,ruby,neon,violet][i%4];
+    sign(x,1.65,z+4.29,5.3,1.32,8+i%4);
+    box(city,x,.32,z+5.08,7,.89,1.26,steel);
+    for(let k=0;k<5;k++)box(city,x-2.6+k*1.25,1.21,z+5.08,.65,.25,.54,k%2?c:warm);
+    addGathering(x+2.0,.32,z+6.75,2,.64);
+  }
+  for(const z of [29,52,72]){
+    const a=[102,7,z],b=[169,7,z];
+    for(const p of [a,b])beam(city,[p[0],.32,p[2]],p,.12,pale);
+    let prev=a;
+    for(let i=1;i<=15;i++){
+      const q=[mix(a[0],b[0],i/15),7-Math.sin(i*Math.PI/15)*1.55,z];
+      beam(city,prev,q,.045,dark);
+      box(city,q[0],q[1]-.45,z,.35,.44,.34,eventColors[i%4],2);
+      prev=q;
+    }
+  }
+}
+function startAmbience(ctx,master,noise){
+  function layer(filterType,freq){
+    const src=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),volume=ctx.createGain();
+    src.buffer=noise;src.loop=true;filter.type=filterType;filter.frequency.value=freq;volume.gain.value=0;
+    src.connect(filter).connect(volume).connect(master);src.start();return {filter,volume};
+  }
+  return {water:layer('lowpass',620),market:layer('bandpass',810),traffic:layer('bandpass',320),next:0,step:0,last:-1};
+}
+function soundEvent(freq,end,duration,gain,type='sine',pan=0){
+  const {ctx,master}=audio,source=ctx.createOscillator(),g=ctx.createGain(),now=ctx.currentTime;
+  source.type=type;source.frequency.setValueAtTime(freq,now);source.frequency.exponentialRampToValueAtTime(end,now+duration);
+  g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(Math.max(.001,gain),now+Math.min(.065,duration/4));g.gain.exponentialRampToValueAtTime(.0001,now+duration);
+  source.connect(g);
+  const stereo=ctx.createStereoPanner();stereo.pan.value=pan;g.connect(stereo).connect(master);
+  source.onended=()=>{source.disconnect();g.disconnect();stereo.disconnect();};
+  source.start(now);source.stop(now+duration+.01);
+}
+function soundscape(){
+  if(!audio||audio.ctx.state!=='running')return;
+  const {ctx,ambience:a}=audio,t=ctx.currentTime;
+  if(t-a.last<.13)return;
+  a.last=t;
+  const [x,y,z]=view.pos,market=Math.exp(-Math.hypot(x-136,y-3,z-45)/40);
+  const waterfront=Math.exp(-Math.max(0,Math.abs(x)-29)/47)*Math.exp(-Math.abs(y)/58);
+  const road=Math.exp(-Math.abs(wrap(Math.abs(x)-69+29,58)-29)/12)*Math.exp(-Math.abs(y)/26);
+  a.water.volume.gain.setTargetAtTime(waterfront*(1.0+.45*Math.sin(t*.89)),t,.45);
+  a.market.volume.gain.setTargetAtTime(market*2.6,t,.35);
+  a.market.filter.frequency.setTargetAtTime(670+160*Math.sin(t*1.8),t,.22);
+  a.traffic.volume.gain.setTargetAtTime(road*(1.65+Math.sin(t*1.38)),t,.3);
+  a.traffic.filter.frequency.setTargetAtTime(260+180*(1+Math.sin(t*1.38)),t,.3);
+  if(t>a.next){
+    a.next=t+(market>.3?.36+Math.random()*.9:2.6+Math.random()*4.2);
+    const pan=Math.random()*1.6-.8;
+    if(market>.22){
+      const voice=125+Math.random()*85;
+      soundEvent(voice,voice*(.83+Math.random()*.5),.18+Math.random()*.24,.043*market,'triangle',pan);
+      if(festivalProgress(clock)>=0)soundEvent(392,523,.48,.095*market,'sine',-pan);
+    }else if(waterfront>.26)soundEvent(480,690, .54,.055*waterfront,'sine',pan);
+    else if(road>.23)soundEvent(166,117,.74,.13*road,'triangle',pan);
+  }
+  if(playing&&!modal&&!player.fly&&player.grounded&&(keys.has('KeyW')||keys.has('KeyA')||keys.has('KeyS')||keys.has('KeyD')||Math.hypot(...stick)>.12)&&t>a.step){
+    a.step=t+(keys.has('ShiftLeft')?.28:.45);soundEvent(123,46,.087,.19,'triangle');
+  }
+}
+
 function animateTraffic(t){
   moving.length=0;softMoving.length=0;
-  for(const f of traffic){
-    const offset=f.side?f.x:f.z,along=((offset+t*f.speed+1700)%1480+1480)%1480-740;
-    const x=f.side?along:f.x+Math.sin(t*.14+f.z)*9,z=f.side?f.z:along;
-    vessel(moving,x,f.h+Math.sin(t*.59+f.x)*.82,z,2.9*f.size,8*f.size,f.side?Math.sign(f.speed)*Math.PI/2:(f.speed<0?Math.PI:0),steel);
-  }
+  renderCityLife(t);
   for(const [x,phase,s] of [[-58,33,1],[73,344,-1]]){
     const z=((t*15+phase)%699)*s+(s>0?-572:290);
     for(let k=0;k<3;k++){
@@ -908,11 +1273,6 @@ function animateTraffic(t){
       box(moving,x,10.65,z+k*11.6*s,4.78,.2,10.7,warm,2);
     }
   }
-  vessel(moving,-13,-.84,Math.sin(t*.036)*404+89,9,27,.06,steel,true);
-  vessel(moving,28,-.9,Math.sin(t*.048+2.4)*344-168,7,19,Math.PI,steel,true);
-  // Arrival traffic crosses the open river at eye level.
-  const x=22+Math.sin(t*.17)*92;
-  vessel(moving,x,55+Math.sin(t*.5)*2,91+Math.cos(t*.13)*36,6,17,1.7,steel,true);
   for(const p of places){
     const [x,y,z]=p.relay,cycle=(Math.sin(t*1.9+p.x)+1)*.5;
     const h=y+1.42+cycle*.35,s=.47+cycle*.26;
@@ -923,7 +1283,12 @@ function animateTraffic(t){
   }
   if(software)return;
   const data=new Float32Array(moving);
-  gl.bindBuffer(gl.ARRAY_BUFFER,dynamicMesh.buffer);gl.bufferSubData(gl.ARRAY_BUFFER,0,data);
+  gl.bindBuffer(gl.ARRAY_BUFFER,dynamicMesh.buffer);
+  if(data.byteLength>dynamicMesh.capacity){
+    dynamicMesh.capacity=Math.ceil(data.byteLength/65536)*65536;
+    gl.bufferData(gl.ARRAY_BUFFER,dynamicMesh.capacity,gl.DYNAMIC_DRAW);
+  }
+  gl.bufferSubData(gl.ARRAY_BUFFER,0,data);
   dynamicMesh.count=data.length/14;
 }
 
@@ -986,7 +1351,7 @@ function release(t){
   gl.deleteFramebuffer(t.f);gl.deleteRenderbuffer(t.depth);gl.deleteTexture(t.t);
 }
 function resize(){
-  const w=canvas.clientWidth,h=canvas.clientHeight,max=quality===1?1660:960;
+  const w=canvas.clientWidth,h=canvas.clientHeight,max=quality===1?2080:1024;
   const scale=Math.min(devicePixelRatio||1,max/Math.max(w,h));
   const width=Math.max(1,Math.round(w*scale)),height=Math.max(1,Math.round(h*scale));
   if(scene&&width===canvas.width&&height===canvas.height) return;
@@ -1299,7 +1664,7 @@ function toggleSound(){
       o.type='sine';o.frequency.value=hz;out.gain.value=v;
       o.connect(out).connect(master);o.start();
     }
-    audio={ctx,master};ctx.resume();
+    audio={ctx,master,ambience:startAmbience(ctx,master,buffer)};ctx.resume();
     $('soundBtn').textContent='Ton an';$('soundBtn').setAttribute('aria-pressed','true');
   }catch{showToast('Audio ist in diesem Browser nicht verfügbar.');}
 }
@@ -1383,7 +1748,10 @@ function frame(now){
     view.pos=[-98+glide*4.2,46+glide*1.1,234-glide*3.4];
     view.yaw=.068+glide*.006;view.pitch=.032+glide*.005;
   }
-  draw();
+  draw();soundscape();
+  const showActive=festivalProgress(clock)>=0;
+  if(playing&&!modal&&showActive&&!festival.announced)showToast('Lotus Exchange · Drohnenshow über dem Nachtmarkt');
+  festival.announced=showActive;
   if(playing){
     updateWaypoint();
     if(clock-lastHUD>.10){lastHUD=clock;updateHUD();}
@@ -1409,6 +1777,7 @@ function events(){
     $('qualityBtn').textContent='Grafik · '+(quality?'Hoch':'Sparsam');
   };
   $('introBack').onclick=titleScreen;
+  $('festivalBtn').onclick=()=>{closeModal(false);if(!playing)enterCity(false);goTo(2);player.yaw=.97;player.pitch=.37;requestFestival();};
   $('resetBtn').onclick=()=>{closeModal();goTo(0);};
   $('mapBtn').onclick=openMap;$('prompt').onclick=readRelay;
   $('trackBtn').onclick=()=>{tracked=tracked===selected?-1:selected;closeModal();};
@@ -1436,6 +1805,7 @@ function events(){
     if(modal)return;
     if(e.code==='Space'&&e.target instanceof HTMLButtonElement&&e.target.matches(':focus-visible'))return;
     if(steer.includes(e.code)){e.preventDefault();keys.add(e.code);}
+    if(!e.repeat&&e.code==='KeyP')requestFestival();
     if(!e.repeat&&e.code==='KeyF')toggleFly();
     if(!e.repeat&&e.code==='KeyE')readRelay();
   });
@@ -1481,13 +1851,14 @@ function events(){
 try{
   if(!gl&&!softCtx)throw new Error('Dieser Browser unterstützt keine der benötigten Grafikfunktionen.');
   if(!software){sceneGL=program(sceneVertex,sceneFragment);skyGL=program(screenVertex,skyFragment);postGL=program(screenVertex,postFragment);}
-  topography();pier();halo();lotus();gardens();spire();undertow();elevatedTransit();relays();
+  topography();pier();halo();lotus();gardens();spire();undertow();elevatedTransit();relays();marketFurniture();prepareCityLife();
   if(!software){
     cityMesh=makeVAO(city);waterMesh=makeVAO(water);dynamicMesh=makeVAO(moving,true);
     city.length=water.length=0;
     screenVAO=gl.createVertexArray();signTexture=texture(512,1024,atlasCanvas);
   }
   document.documentElement.dataset.renderer=software?'canvas':'webgl2';
+  if(software)indexScenery();
   initMap();events();requestAnimationFrame(frame);
 }catch(error){
   console.error(error);

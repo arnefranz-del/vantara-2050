@@ -456,6 +456,7 @@ function drawSoftware(){
   poly([[-1010,-.025,-1030],[-39,-.025,-1030],[-39,-.025,1030],[-1010,-.025,1030]],land);
   poly([[39,-.025,-1030],[1010,-.025,-1030],[1010,-.025,1030],[39,-.025,1030]],land);
   const queue=[];
+  const pavement=[];
   function queueFaces(mesh){
     for(const face of mesh){
       const {mid,radius,mat,n}=face;
@@ -468,6 +469,9 @@ function drawSoftware(){
       if(mat!==2&&mat!==5&&mat!==6&&(n[0]*dx+n[1]*dy+n[2]*dz)>.01)continue;
       const side=dx*r[0]+dy*r[1]+dz*r[2],up=dx*u[0]+dy*u[1]+dz*u[2];
       if(Math.abs(side)>depth*viewLens[0]+radius*1.6||Math.abs(up)>depth*viewLens[1]+radius*1.6)continue;
+      if(n[1]>.99 && mid[1]<=eye[1] && ((mid[1]<.55 && mid[1]>=-.025) || (mat===3&&eye[1]-mid[1]<2.6&&radius>10))){
+        pavement.push([depth,face]);continue;
+      }
       queue.push([depth,face]);
     }
   }
@@ -475,6 +479,8 @@ function drawSoftware(){
     if(couldSee(tile.x,40,tile.z,tile.r+130,1800+tile.r))queueFaces(tile.faces);
   }
   queueFaces(softMoving);
+  pavement.sort((a,b)=>a[1].mid[1]-b[1].mid[1]||b[0]-a[0]);
+  for(const [,face] of pavement)poly(face.points,softwareTone(face.c.map(v=>v*(.67-night*.22))));
   queue.sort((a,b)=>b[0]-a[0]);
   reflections.length=0;
   let reflectedCount=0;
@@ -1777,7 +1783,7 @@ function events(){
     $('qualityBtn').textContent='Grafik · '+(quality?'Hoch':'Sparsam');
   };
   $('introBack').onclick=titleScreen;
-  $('festivalBtn').onclick=()=>{closeModal(false);if(!playing)enterCity(false);goTo(2);player.yaw=.97;player.pitch=.37;requestFestival();};
+  $('festivalBtn').onclick=()=>{closeModal(false);if(!playing)enterCity(false);goTo(2);player.x=123;player.z=61;player.yaw=.65;player.pitch=.15;requestFestival();};
   $('resetBtn').onclick=()=>{closeModal();goTo(0);};
   $('mapBtn').onclick=openMap;$('prompt').onclick=readRelay;
   $('trackBtn').onclick=()=>{tracked=tracked===selected?-1:selected;closeModal();};

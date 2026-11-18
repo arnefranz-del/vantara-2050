@@ -1,5 +1,7 @@
 # VANTARA 2050
 
+[![VANTARA 2050 title screen with the Halo Ring at sunset](preview.jpg)](https://arnefranz-del.github.io/vantara-2050/)
+
 **[Play VANTARA 2050](https://arnefranz-del.github.io/vantara-2050/)**
 
 The tide took the streets. Vantara built over them. Tonight, the old city is broadcasting again.

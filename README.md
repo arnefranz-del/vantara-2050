@@ -8,7 +8,7 @@ VANTARA 2050 is a browser-based 3D exploration game set in a waterfront megacity
 
 ## Play
 
-Open the live link above, or download [index.html](https://raw.githubusercontent.com/arnefranz-del/vantara-2050/main/index.html) and open it in a current browser with WebGL 2 enabled. The file works offline. The intro, interface, and radio logs are in German. Touch controls appear on touch devices.
+Open the live link above, or download [index.html](https://raw.githubusercontent.com/arnefranz-del/vantara-2050/main/index.html) and open it in a current browser. WebGL 2 provides the full effects, and a Canvas renderer keeps the city playable on machines without it. The file works offline. The intro, interface, and radio logs are in German. Touch controls appear on touch devices.
 
 | Control | Action |
 | --- | --- |

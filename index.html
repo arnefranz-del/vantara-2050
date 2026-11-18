@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#080f17">
 <meta name="description" content="VANTARA 2050. Eine frei erkundbare 3D-Stadt am Wasser.">
+<meta property="og:title" content="VANTARA 2050">
+<meta property="og:description" content="The tide took the streets. Vantara built over them. Tonight, the old city is broadcasting again.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://arnefranz-del.github.io/vantara-2050/">
+<meta property="og:image" content="https://arnefranz-del.github.io/vantara-2050/preview.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <title>VANTARA 2050</title>
 <style>
 :root{color-scheme:dark;--ink:#eef7f5;--dim:#a9bbbb;--mint:#9fffe2;--amber:#ffb276;--line:#b7e8e337;--mono:ui-monospace,SFMono-Regular,Consolas,monospace;--edge:clamp(22px,5.5vw,104px)}
@@ -286,6 +292,206 @@ function solid(x,y,z,w,h,d,show=true){
 }
 const near=(x,z)=>buckets.get(Math.floor(x/CELL)+','+Math.floor(z/CELL))||[];
 const city=[],water=[],moving=[];
+const software=!gl;
+const softCtx=software?canvas.getContext('2d',{alpha:false}):null;
+const softCity=[],softMoving=[];
+function captureFace(mesh,points,n,c,mat,tag,uv){
+  if(mesh===water)return;
+  const mid=[0,0,0];
+  for(const p of points) for(let i=0;i<3;i++)mid[i]+=p[i]/points.length;
+  const radius=Math.max(...points.map(p=>Math.hypot(...sub(p,mid))));
+  const dims=uv?[uv[1][0],uv[3][1]]:[0,0];
+  const list=mesh===moving?softMoving:softCity;
+  list.push({points,n,c,mat,tag,mid,radius,dims});
+}
+function softwareTone(c){
+  return 'rgb('+c.map(v=>Math.round(clamp(v,0,1)*255)).join(',')+')';
+}
+function softwareHash(x,y){
+  const v=Math.sin(x*127.1+y*311.7)*43758.5453;
+  return v-Math.floor(v);
+}
+function softHorizon(){
+  const base=[.51,.65,.69],sunset=[.64,.33,.24],after=[.077,.108,.18];
+  return base.map((c,i)=>mix(mix(c,sunset[i],dusk*.84),after[i],night));
+}
+function drawSoftware(){
+  const w=canvas.clientWidth,h=canvas.clientHeight;
+  const scale=Math.min(1,(quality?1440:810)/Math.max(w,h));
+  const sw=Math.max(1,Math.round(w*scale)),sh=Math.max(1,Math.round(h*scale));
+  if(canvas.width!==sw||canvas.height!==sh){canvas.width=sw;canvas.height=sh;}
+  camera();
+  if(clock-lastDynamic>.052||lastDynamic<0){animateTraffic(clock);lastDynamic=clock;}
+  const ctx=softCtx,{f,r,u}=basis,W=canvas.width,H=canvas.height;
+  const sx=W*.5/viewLens[0],sy=H*.5/viewLens[1],cx=W*.5,cy=H*.5;
+  const eye=view.pos,horizon=softHorizon();
+  const horizonY=cy+Math.tan(view.pitch)*sy;
+  const cam=p=>{
+    const d=[p[0]-eye[0],p[1]-eye[1],p[2]-eye[2]];
+    return [dot(d,r),dot(d,u),dot(d,f)];
+  };
+  const project=p=>[cx+p[0]*sx/p[2],cy-p[1]*sy/p[2]];
+  function clip(points){
+    if(points.every(p=>p[2]<=.27))return null;
+    if(points.every(p=>p[2]>.27))return points;
+    const result=[];
+    let prev=points.at(-1);
+    for(const curr of points){
+      if((prev[2]>.27)!==(curr[2]>.27)){
+        const t=(.27-prev[2])/(curr[2]-prev[2]);
+        result.push([mix(prev[0],curr[0],t),mix(prev[1],curr[1],t),.27]);
+      }
+      if(curr[2]>.27)result.push(curr);
+      prev=curr;
+    }
+    return result;
+  }
+  function path(points){
+    ctx.beginPath();ctx.moveTo(points[0][0],points[0][1]);
+    for(let k=1;k<points.length;k++)ctx.lineTo(points[k][0],points[k][1]);
+    ctx.closePath();
+  }
+  function poly(points,fill){
+    const clipped=clip(points.map(cam));
+    if(!clipped)return;
+    path(clipped.map(project));ctx.fillStyle=fill;ctx.fill();
+  }
+
+  const zen=[mix(.17,.04,dusk),mix(.34,.102,dusk),mix(.50,.18,dusk)].map((c,i)=>mix(c,[.012,.022,.066][i],night));
+  const skyGradient=ctx.createLinearGradient(0,Math.min(0,horizonY-H*.54),0,Math.max(10,horizonY));
+  skyGradient.addColorStop(0,softwareTone(zen));
+  skyGradient.addColorStop(.69,softwareTone(zen.map((v,i)=>mix(v,horizon[i],.65))));
+  skyGradient.addColorStop(1,softwareTone(horizon));
+  ctx.fillStyle=skyGradient;ctx.fillRect(0,0,W,H);
+  const pSun=cam(add(eye,mul(sun,1000)));
+  if(pSun[2]>.27&&night<.99){
+    const [x,y]=project(pSun),radius=sy*.41;
+    const glow=ctx.createRadialGradient(x,y,0,x,y,radius);
+    glow.addColorStop(0,'rgba(255,190,113,'+(.74*(1-night))+')');
+    glow.addColorStop(.16,'rgba(255,168,103,'+(.44*(1-night))+')');
+    glow.addColorStop(1,'rgba(255,134,81,0)');
+    ctx.fillStyle=glow;ctx.fillRect(x-radius,y-radius,radius*2,radius*2);
+    ctx.beginPath();ctx.arc(x,y,sy*.026,0,TAU);
+    ctx.fillStyle='rgba(255,224,164,'+(.97*(1-night))+')';ctx.fill();
+  }
+  for(let i=0;i<135;i++){
+    const angle=i*2.4002,height=.13+softwareHash(i,15)*.86;
+    const p=cam(add(eye,mul([Math.sin(angle)*Math.sqrt(1-height*height),height,-Math.cos(angle)*Math.sqrt(1-height*height)],1000)));
+    if(p[2]<=.27)continue;
+    const [x,y]=project(p);if(x<0||x>W||y<0||y>H)continue;
+    const a=.16+.42*night;
+    ctx.fillStyle='rgba(218,245,255,'+a+')';ctx.fillRect(x,y,i%7===0?2:1,i%7===0?2:1);
+  }
+  const moon=cam(add(eye,mul(norm([.48,.43,-.62]),1000)));
+  if(moon[2]>.27){
+    const [x,y]=project(moon);
+    ctx.beginPath();ctx.arc(x,y,sy*.018,0,TAU);ctx.fillStyle='rgba(211,235,249,'+(.5+night*.44)+')';ctx.fill();
+  }
+  const waterStart=Math.max(0,Math.min(H-1,horizonY)),rivershade=ctx.createLinearGradient(0,waterStart,0,H);
+  rivershade.addColorStop(0,softwareTone(horizon.map(v=>v*.64)));
+  rivershade.addColorStop(1,softwareTone([.036,.157,.179].map(v=>v*(1-night*.35))));
+  ctx.fillStyle=rivershade;ctx.fillRect(0,waterStart,W,H-waterStart);
+  const river=[[-39,WATER,-1100],[39,WATER,-1100],[39,WATER,1100],[-39,WATER,1100]];
+  const riverClip=clip(river.map(cam));
+  if(riverClip){
+    ctx.save();path(riverClip.map(project));ctx.clip();
+    const distortion=Math.sin(clock*1.6)*.003*W;
+    for(const face of reflections){
+      const reflected=clip(face.points.map(p=>cam([p[0],WATER*2-p[1],p[2]])));
+      if(!reflected)continue;
+      const pts=reflected.map(project);
+      for(const p of pts)p[0]+=Math.sin(p[1]*.078+clock)*distortion;
+      path(pts);ctx.fillStyle=face.tint;ctx.fill();
+    }
+    for(let i=0;i<80;i++){
+      const y=waterStart+((i*19.83+clock*3.9)%Math.max(1,H-waterStart));
+      const x=softwareHash(i,31)*W;
+      const width=5+softwareHash(i,12)*37+(y/H)*22;
+      ctx.fillStyle=i%4?'#b0eae414':'#ffcd9032';ctx.fillRect(x,y,width,1);
+    }
+    ctx.restore();
+  }
+  const land=softwareTone([.22,.275,.30].map((v,i)=>mix(v,horizon[i],.28)*(1-night*.59)));
+  poly([[-1010,-.025,-1030],[-39,-.025,-1030],[-39,-.025,1030],[-1010,-.025,1030]],land);
+  poly([[39,-.025,-1030],[1010,-.025,-1030],[1010,-.025,1030],[39,-.025,1030]],land);
+  const queue=[];
+  function queueFaces(mesh){
+    for(const face of mesh){
+      const {mid,radius,mat,n}=face;
+      if(radius>590)continue; // Ground and river are drawn against the horizon above.
+      const dx=mid[0]-eye[0],dy=mid[1]-eye[1],dz=mid[2]-eye[2];
+      const depth=dx*f[0]+dy*f[1]+dz*f[2];
+      if(depth+radius<.26||depth-radius>1525)continue;
+      if(radius<depth*.0019&&mat!==2&&mat!==6)continue;
+      if(radius<depth*.0008)continue;
+      if(mat!==2&&mat!==5&&mat!==6&&(n[0]*dx+n[1]*dy+n[2]*dz)>.01)continue;
+      const side=dx*r[0]+dy*r[1]+dz*r[2],up=dx*u[0]+dy*u[1]+dz*u[2];
+      if(Math.abs(side)>depth*viewLens[0]+radius*1.6||Math.abs(up)>depth*viewLens[1]+radius*1.6)continue;
+      queue.push([depth,face]);
+    }
+  }
+  queueFaces(softCity);queueFaces(softMoving);
+  queue.sort((a,b)=>b[0]-a[0]);
+  reflections.length=0;
+  let reflectedCount=0;
+  for(const [depth,face] of queue){
+    const {mat,n,c,tag,mid,dims}=face;
+    const cameraPoints=face.points.map(cam),st=clip(cameraPoints);
+    if(!st)continue;
+    const pts=st.map(project);
+    if(pts.every(p=>p[0]<0)||pts.every(p=>p[0]>W)||pts.every(p=>p[1]<0)||pts.every(p=>p[1]>H))continue;
+    const fog=clamp(1-Math.exp(-Math.max(depth,0)*.00128),0,.85);
+    const lamp=mat===2||mat===6;
+    const sunlight=Math.max(0,dot(n,sun));
+    const light=lamp?1.12:(.57+.18*n[1]+sunlight*.53*(1-night))*(1-night*.46);
+    const tint=c.map((v,i)=>mix(v*light,horizon[i]*.89,fog*(lamp?.43:.87)));
+    ctx.fillStyle=softwareTone(tint);
+    path(pts);ctx.fill();
+    // The low-resolution reflection pass reuses the visible skyline on the next frame.
+    if(reflectedCount<1400&&depth>8&&mid[1]>2&&((mat===1||mat===7)||lamp&&face.radius>2.4)){
+      reflections.push({points:face.points,tint:'rgba('+tint.map(v=>Math.round(clamp(v,0,1)*255)).join(',')+','+(lamp?.56:.42)+')'});
+      reflectedCount++;
+    }
+    if((mat===1||mat===7)&&st===cameraPoints&&quality&&depth<1050){
+      const span=Math.hypot(pts[1][0]-pts[0][0],pts[1][1]-pts[0][1]);
+      const height=Math.hypot(pts[3][0]-pts[0][0],pts[3][1]-pts[0][1]);
+      const cols=Math.max(1,Math.floor(dims[0]/(mat===7?3.7:2.75)));
+      const rows=Math.max(1,Math.floor(dims[1]/(mat===7?4.5:3.47)));
+      if(span<9||height<13)continue;
+      const incX=Math.max(1,Math.ceil(cols*1.9/span)),incY=Math.max(1,Math.ceil(rows*2.2/height));
+      const at=(u,v)=>project(cameraPoints[0].map((p,i)=>mix(mix(p,cameraPoints[1][i],u),mix(cameraPoints[3][i],cameraPoints[2][i],u),v)));
+      const windowColors=[softwareTone([1,.67,.39].map((v,i)=>mix(v,horizon[i],fog*.9))),softwareTone([.41,.86,.88].map((v,i)=>mix(v,horizon[i],fog*.8)))];
+      ctx.globalAlpha=.48+.28*dusk+.10*night;
+      for(let j=0;j<rows;j+=incY){
+        for(let i=0;i<cols;i+=incX){
+          const h=softwareHash(i+tag*23,j+tag*47);
+          if(h<.66)continue;
+          const u=(i+.15)/cols,v=(j+.26)/rows,a=at(u,v),b=at((i+.88)/cols,v),d=at(u,(j+.70)/rows);
+          const x=Math.min(a[0],b[0],d[0]),y=Math.min(a[1],b[1],d[1]);
+          const width=Math.max(a[0],b[0],d[0])-x,rise=Math.max(a[1],b[1],d[1])-y;
+          if(x>W||y>H||x+width<0||y+rise<0||width<1||rise<.8)continue;
+          ctx.fillStyle=windowColors[h>.887?1:0];
+          ctx.fillRect(x,y,Math.min(width,45),Math.min(rise,27));
+        }
+      }
+      ctx.globalAlpha=1;
+    }else if(mat===5&&st===cameraPoints){
+      const signIndex=clamp(Math.round(tag),0,signs.length-1);
+      const [a,b,,d]=pts;
+      if(Math.hypot(b[0]-a[0],b[1]-a[1])>17){
+        ctx.save();
+        ctx.transform((b[0]-a[0])/512,(b[1]-a[1])/512,(a[0]-d[0])/128,(a[1]-d[1])/128,d[0],d[1]);
+        ctx.drawImage(atlasCanvas,0,signIndex*128,512,128,0,0,512,128);
+        ctx.restore();
+      }
+    }
+  }
+  const vignette=ctx.createRadialGradient(W*.53,H*.47,H*.30,W*.53,H*.47,Math.max(H,W)*.63);
+  vignette.addColorStop(0,'#080d1700');vignette.addColorStop(1,'#080d174a');
+  ctx.fillStyle=vignette;ctx.fillRect(0,0,W,H);
+}
+const reflections=[];
+
 function vertex(mesh,p,n,c,mat,tag,uv){
   mesh.push(p[0],p[1],p[2],n[0],n[1],n[2],c[0],c[1],c[2],mat,tag,0,uv[0],uv[1]);
 }
@@ -293,10 +499,12 @@ function quad(mesh,a,b,c,d,color,mat=0,tag=0,uv=null){
   const n=norm(cross(sub(b,a),sub(c,a)));
   const tex=uv||[[0,0],[Math.hypot(...sub(b,a)),0],[Math.hypot(...sub(b,a)),Math.hypot(...sub(d,a))],[0,Math.hypot(...sub(d,a))]];
   const points=[a,b,c,d];
+  if(software){captureFace(mesh,points,n,color,mat,tag,tex);return;}
   for(const i of [0,1,2,0,2,3]) vertex(mesh,points[i],n,color,mat,tag,tex[i]);
 }
 function tri(mesh,a,b,c,color,mat=0){
   const n=norm(cross(sub(b,a),sub(c,a)));
+  if(software){captureFace(mesh,[a,b,c],n,color,mat,0,null);return;}
   vertex(mesh,a,n,color,mat,0,[0,0]);vertex(mesh,b,n,color,mat,0,[1,0]);vertex(mesh,c,n,color,mat,0,[.5,1]);
 }
 function box(mesh,x,y,z,w,h,d,c,mat=0,tag=0,angle=0,roof=0){
@@ -399,7 +607,7 @@ for(let i=0;i<signs.length;i++){
 function sign(x,y,z,w,h,i,facing=1){
   const bottom=1-(i+1)/8,top=1-i/8;
   const s=w*.5*facing;
-  quad(city,[x-s,y,z],[x+s,y,z],[x+s,y+h,z],[x-s,y+h,z],pale,5,0,[[0,bottom],[1,bottom],[1,top],[0,top]]);
+  quad(city,[x-s,y,z],[x+s,y,z],[x+s,y+h,z],[x-s,y+h,z],pale,5,i,[[0,bottom],[1,bottom],[1,top],[0,top]]);
 }
 function vessel(mesh,x,y,z,w,d,a,c,big=false){
   box(mesh,x,y,z,w,.69,d,c,0,0,a);
@@ -686,7 +894,7 @@ function makeVAO(mesh,dynamic=false){
 const traffic=[];
 for(let i=0;i<22;i++) traffic.push({x:randIn(-220,280),z:randIn(-650,680),h:randIn(21,109),speed:randIn(9,24)*(i%2?-1:1),size:randIn(.63,1.65),side:i%4===0});
 function animateTraffic(t){
-  moving.length=0;
+  moving.length=0;softMoving.length=0;
   for(const f of traffic){
     const offset=f.side?f.x:f.z,along=((offset+t*f.speed+1700)%1480+1480)%1480-740;
     const x=f.side?along:f.x+Math.sin(t*.14+f.z)*9,z=f.side?f.z:along;
@@ -713,6 +921,7 @@ function animateTraffic(t){
     beam(moving,[x+s,h,z],[x,h-s,z],.062,p.color,2);
     beam(moving,[x,h-s,z],[x-s,h,z],.062,p.color,2);
   }
+  if(software)return;
   const data=new Float32Array(moving);
   gl.bindBuffer(gl.ARRAY_BUFFER,dynamicMesh.buffer);gl.bufferSubData(gl.ARRAY_BUFFER,0,data);
   dynamicMesh.count=data.length/14;
@@ -818,6 +1027,7 @@ function renderPass(t,reflect){
   if(!reflect) meshDraw(waterMesh);
 }
 function draw(){
+  if(software){drawSoftware();return;}
   resize();camera();
   if(clock-lastDynamic>.032||lastDynamic<0){animateTraffic(clock);lastDynamic=clock;}
   renderPass(mirror,true);renderPass(scene,false);
@@ -1269,12 +1479,15 @@ function events(){
   });
 }
 try{
-  if(!gl)throw new Error('Dein Browser braucht aktiviertes WebGL 2. Öffne die Datei in einem aktuellen Chrome, Firefox, Edge oder Safari.');
-  sceneGL=program(sceneVertex,sceneFragment);skyGL=program(screenVertex,skyFragment);postGL=program(screenVertex,postFragment);
+  if(!gl&&!softCtx)throw new Error('Dieser Browser unterstützt keine der benötigten Grafikfunktionen.');
+  if(!software){sceneGL=program(sceneVertex,sceneFragment);skyGL=program(screenVertex,skyFragment);postGL=program(screenVertex,postFragment);}
   topography();pier();halo();lotus();gardens();spire();undertow();elevatedTransit();relays();
-  cityMesh=makeVAO(city);waterMesh=makeVAO(water);dynamicMesh=makeVAO(moving,true);
-  city.length=water.length=0;
-  screenVAO=gl.createVertexArray();signTexture=texture(512,1024,atlasCanvas);
+  if(!software){
+    cityMesh=makeVAO(city);waterMesh=makeVAO(water);dynamicMesh=makeVAO(moving,true);
+    city.length=water.length=0;
+    screenVAO=gl.createVertexArray();signTexture=texture(512,1024,atlasCanvas);
+  }
+  document.documentElement.dataset.renderer=software?'canvas':'webgl2';
   initMap();events();requestAnimationFrame(frame);
 }catch(error){
   console.error(error);
